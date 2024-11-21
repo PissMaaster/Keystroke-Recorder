@@ -1,3 +1,7 @@
+This was made for Educational purposes only
+
+Recording and transmitting keystrokes without explicit user consent can still violate privacy and legal guidelines. It's important to always act ethically and responsibly when working with technology
+
 Replace your_email@gmail.com and recipient_email@gmail.com with actual email addresses.
 If you use two-factor authentication (2FA) with Gmail, you'll need to create an App Password instead of using your main email password.
 The code will attach the Timer09C file and send it via Gmail's SMTP server.
